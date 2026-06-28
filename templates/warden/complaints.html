@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Complaints{% endblock %}
+
+{% block nav_links %}
+<a href="/warden/dashboard">Dashboard</a>
+<a href="/warden/students">Students</a>
+<a href="/warden/complaints">Complaints</a>
+<a href="/warden/inventory">Inventory</a>
+<a href="/warden/maintenance">Maintenance</a>
+<a href="/warden/visitors">Visitors</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Complaints</div>
+
+<div class="section" id="update-section" style="display:none;">
+    <div class="section-title">Update Complaint — <span id="selected-complaint-label"></span></div>
+    <div class="form-grid">
+        <input type="hidden" id="complaint_id">
+        <div class="form-group">
+            <label>New Status</label>
+            <select id="complaint_status">
+                <option value="">Select status</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+                <option value="CLOSED">Closed</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Remarks</label>
+            <input type="text" id="remarks" placeholder="Remarks">
+        </div>
+    </div>
+    <div id="update-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="updateComplaint()">Update Complaint</button>
+        <button class="btn" onclick="cancelUpdate()" style="margin-left:10px;">Cancel</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Filter</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Status</label>
+            <select id="filter_status" onchange="applyFilter()">
+                <option value="">All</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+                <option value="CLOSED">Closed</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Priority</label>
+            <select id="filter_priority" onchange="applyFilter()">
+                <option value="">All</option>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Search Title / Student</label>
+            <input type="text" id="filter_search" placeholder="Title or student name..." oninput="applyFilter()">
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">All Complaints <span id="complaint-count" style="font-weight:normal;color:#888;font-size:14px;"></span> <small style="font-weight:normal;color:#888;">(click Update to change status)</small></div>
+    <div class="table-wrap">
+        <table id="complaints-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allComplaints = [];
+
+    function selectComplaint(id, currentStatus, title) {
+        document.getElementById("complaint_id").value = id;
+        document.getElementById("complaint_status").value = currentStatus;
+        document.getElementById("remarks").value = "";
+        document.getElementById("selected-complaint-label").textContent = `#${id} — ${title}`;
+        document.getElementById("update-section").style.display = "block";
+        document.getElementById("update-msg").textContent = "";
+        document.getElementById("update-section").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function cancelUpdate() {
+        document.getElementById("update-section").style.display = "none";
+    }
+
+    async function updateComplaint() {
+        const id = document.getElementById("complaint_id").value;
+        const body = {
+            status: document.getElementById("complaint_status").value,
+            remarks: document.getElementById("remarks").value.trim()
+        };
+        if (!body.status) {
+            showMessage("update-msg", "Please select a status.", true);
+            return;
+        }
+        const res = await apiRequest("PUT", "/api/warden/complaints/" + id, body);
+        if (!res) return;
+        showMessage("update-msg", res.data.message || (res.ok ? "Updated." : "Error."), !res.ok);
+        if (res.ok) {
+            loadComplaints();
+            cancelUpdate();
+        }
+    }
+
+    async function loadComplaints() {
+        const res = await apiRequest("GET", "/api/warden/complaints");
+        if (!res || !res.ok) return;
+        allComplaints = res.data.complaints;
+        applyFilter();
+    }
+
+    function applyFilter() {
+        const status = document.getElementById("filter_status").value;
+        const priority = document.getElementById("filter_priority").value;
+        const search = document.getElementById("filter_search").value.toLowerCase();
+        let filtered = allComplaints;
+        if (status) filtered = filtered.filter(c => c.status === status);
+        if (priority) filtered = filtered.filter(c => c.priority === priority);
+        if (search) {
+            filtered = filtered.filter(c =>
+                (c.title || "").toLowerCase().includes(search) ||
+                (c.student_name || "").toLowerCase().includes(search)
+            );
+        }
+        document.getElementById("complaint-count").textContent = `(${filtered.length} records)`;
+
+        const table = document.getElementById("complaints-table");
+        if (!filtered.length) {
+            table.innerHTML = "<tr><td>No complaints found.</td></tr>";
+            return;
+        }
+        const headers = Object.keys(filtered[0]);
+        let html = "<thead><tr>" + headers.map(h => `<th>${h}</th>`).join("") + "<th>Action</th></tr></thead><tbody>";
+        filtered.forEach(c => {
+            const cols = headers.map(h => `<td>${c[h] ?? ""}</td>`).join("");
+            const btn = `<td><button class="btn btn-primary" style="padding:4px 10px;font-size:12px;"
+                onclick='selectComplaint(${c.complaint_id}, "${c.status}", ${JSON.stringify(c.title)})'>Update</button></td>`;
+            html += `<tr>${cols}${btn}</tr>`;
+        });
+        html += "</tbody>";
+        table.innerHTML = html;
+    }
+
+    document.addEventListener("DOMContentLoaded", loadComplaints);
+</script>
+{% endblock %}

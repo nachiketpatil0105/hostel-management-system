@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}My Payments{% endblock %}
+
+{% block nav_links %}
+<a href="/student/profile">Profile</a>
+<a href="/student/complaint">Raise Complaint</a>
+<a href="/student/payments">Payments</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">My Payments</div>
+
+<div class="section">
+    <div class="section-title">Payment History</div>
+    <div class="table-wrap">
+        <table id="payments-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadPayments() {
+        const user = getUser();
+        if (!user) return;
+        // Dedicated payments fetch — no need to load full profile
+        const res = await apiRequest("GET", "/api/student/profile/" + user.member_id);
+        if (!res || !res.ok) return;
+        buildTable("payments-table", res.data.payments);
+    }
+
+    document.addEventListener("DOMContentLoaded", loadPayments);
+</script>
+{% endblock %}

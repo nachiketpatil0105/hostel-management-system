@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance{% endblock %}
+
+{% block nav_links %}
+<a href="/admin/dashboard">Dashboard</a>
+<a href="/admin/users">Users</a>
+<a href="/admin/hostels">Hostels</a>
+<a href="/admin/rooms">Rooms</a>
+<a href="/admin/payments">Payments</a>
+<a href="/admin/complaints">Complaints</a>
+<a href="/admin/visitors">Visitors</a>
+<a href="/admin/movement">Movement</a>
+<a href="/admin/maintenance">Maintenance</a>
+<a href="/admin/complaint-types">Complaint Types</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Maintenance Requests</div>
+
+<div class="section" id="update-section" style="display:none;">
+    <div class="section-title">Update Request — <span id="selected-maintenance-label"></span></div>
+    <div class="form-grid">
+        <input type="hidden" id="maintenance_id">
+        <div class="form-group">
+            <label>Status</label>
+            <select id="update_status">
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Assign To</label>
+            <select id="update_assigned_to">
+                <option value="">Unassigned</option>
+            </select>
+        </div>
+    </div>
+    <div id="update-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="updateMaintenance()">Update</button>
+        <button class="btn" onclick="cancelUpdate()" style="margin-left:10px;">Cancel</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Filter</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Status</label>
+            <select id="filter_status" onchange="loadMaintenance()">
+                <option value="">All</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Hostel</label>
+            <select id="filter_hostel" onchange="loadMaintenance()">
+                <option value="">All Hostels</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">All Maintenance Requests <span id="maintenance-count" style="font-weight:normal;color:#888;font-size:14px;"></span></div>
+    <div class="table-wrap">
+        <table id="maintenance-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allRequests = [];
+
+    async function loadHostels() {
+        const res = await apiRequest("GET", "/api/admin/hostels");
+        if (!res || !res.ok) return;
+        const sel = document.getElementById("filter_hostel");
+        res.data.hostels.forEach(h => {
+            sel.innerHTML += `<option value="${h.hostel_id}">${h.hostel_name}</option>`;
+        });
+    }
+
+    async function loadAssignees() {
+        const res = await apiRequest("GET", "/api/admin/users");
+        if (!res || !res.ok) return;
+        const sel = document.getElementById("update_assigned_to");
+        res.data.users.forEach(u => {
+            sel.innerHTML += `<option value="${u.member_id}">${u.full_name} (${u.role_name})</option>`;
+        });
+    }
+
+    async function loadMaintenance() {
+        const status = document.getElementById("filter_status").value;
+        const hostel = document.getElementById("filter_hostel").value;
+        let url = "/api/admin/maintenance";
+        const params = [];
+        if (status) params.push("status=" + encodeURIComponent(status));
+        if (hostel) params.push("hostel_id=" + encodeURIComponent(hostel));
+        if (params.length) url += "?" + params.join("&");
+        const res = await apiRequest("GET", url);
+        if (!res || !res.ok) return;
+        allRequests = res.data.maintenance;
+        document.getElementById("maintenance-count").textContent = `(${allRequests.length} records)`;
+        renderTable();
+    }
+
+    function renderTable() {
+        const table = document.getElementById("maintenance-table");
+        if (!allRequests.length) {
+            table.innerHTML = "<tr><td colspan='12'>No maintenance requests found.</td></tr>";
+            return;
+        }
+        const cols = [
+            "maintenance_id", "hostel_name", "room_number", "category_name",
+            "asset_tag", "maintenance_type", "issue_description",
+            "status", "reported_by_name", "assigned_to_name", "reported_at", "completed_at"
+        ];
+        const labels = [
+            "ID", "Hostel", "Room", "Category", "Asset Tag",
+            "Type", "Issue", "Status", "Reported By", "Assigned To", "Reported At", "Completed At"
+        ];
+        let html = "<thead><tr>" + labels.map(l => `<th>${l}</th>`).join("") + "<th>Action</th></tr></thead><tbody>";
+        allRequests.forEach(r => {
+            const cells = cols.map(c => `<td>${r[c] ?? "—"}</td>`).join("");
+            const btn = `<td><button class="btn btn-primary" style="padding:4px 10px;font-size:12px;"
+                onclick="selectRequest(${r.maintenance_id}, '${(r.category_name || "").replace("'", "\\'")} #${r.maintenance_id}', '${r.status}', ${r.assigned_to || "null"})">Update</button></td>`;
+            html += `<tr>${cells}${btn}</tr>`;
+        });
+        html += "</tbody>";
+        table.innerHTML = html;
+    }
+
+    function selectRequest(id, label, status, assignedTo) {
+        document.getElementById("maintenance_id").value = id;
+        document.getElementById("update_status").value = status;
+        document.getElementById("update_assigned_to").value = assignedTo || "";
+        document.getElementById("selected-maintenance-label").textContent = label;
+        document.getElementById("update-msg").textContent = "";
+        document.getElementById("update-section").style.display = "block";
+        document.getElementById("update-section").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function cancelUpdate() {
+        document.getElementById("update-section").style.display = "none";
+    }
+
+    async function updateMaintenance() {
+        const id = document.getElementById("maintenance_id").value;
+        const assignedRaw = document.getElementById("update_assigned_to").value;
+        const body = {
+            status: document.getElementById("update_status").value,
+            assigned_to: assignedRaw ? parseInt(assignedRaw) : null
+        };
+        const res = await apiRequest("PUT", "/api/admin/maintenance/" + id, body);
+        if (!res) return;
+        showMessage("update-msg", res.data.message || (res.ok ? "Updated." : "Error."), !res.ok);
+        if (res.ok) {
+            loadMaintenance();
+            cancelUpdate();
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadHostels();
+        loadAssignees();
+        loadMaintenance();
+    });
+</script>
+{% endblock %}

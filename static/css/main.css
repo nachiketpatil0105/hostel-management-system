@@ -1,0 +1,391 @@
+/* =============================================
+   RESET & BASE
+   ============================================= */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 15px;
+    background: #f4f6f9;
+    color: #2d2d2d;
+    min-height: 100vh;
+}
+
+a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+
+/* =============================================
+   NAVBAR
+   ============================================= */
+
+.navbar {
+    background: #1e3a5f;
+    color: #fff;
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.navbar .brand {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #fff;
+}
+
+.navbar nav {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.navbar nav a {
+    color: #c8d9f0;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+.navbar nav a:hover {
+    color: #fff;
+    text-decoration: none;
+}
+
+.navbar .nav-user {
+    font-size: 13px;
+    color: #93b4d8;
+    margin-right: 8px;
+}
+
+.navbar .btn-logout {
+    background: #e53e3e;
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.navbar .btn-logout:hover {
+    background: #c53030;
+}
+
+
+/* =============================================
+   PAGE LAYOUT
+   ============================================= */
+
+.page {
+    max-width: 1100px;
+    margin: 32px auto;
+    padding: 0 20px;
+}
+
+.page-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: #1e3a5f;
+}
+
+.section {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    padding: 24px;
+    margin-bottom: 28px;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    color: #1e3a5f;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 10px;
+}
+
+
+/* =============================================
+   FORMS
+   ============================================= */
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 8px 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 14px;
+    background: #fff;
+    color: #2d2d2d;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-actions {
+    margin-top: 18px;
+}
+
+
+/* =============================================
+   BUTTONS
+   ============================================= */
+
+.btn {
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 4px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.btn-success {
+    background: #16a34a;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: #15803d;
+}
+
+.btn-danger {
+    background: #e53e3e;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #c53030;
+}
+
+.btn-sm {
+    padding: 4px 12px;
+    font-size: 13px;
+}
+
+
+/* =============================================
+   TABLES
+   ============================================= */
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+table th {
+    background: #f0f4f8;
+    color: #4a5568;
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #2d2d2d;
+}
+
+table tr:last-child td {
+    border-bottom: none;
+}
+
+table tr:hover td {
+    background: #f7fafc;
+}
+
+
+/* =============================================
+   STATUS BADGES
+   ============================================= */
+
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-active, .badge-success, .badge-available {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-warning, .badge-pending, .badge-open {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-danger, .badge-failed, .badge-full {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-secondary, .badge-vacated, .badge-inactive {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+
+/* =============================================
+   MESSAGES
+   ============================================= */
+
+.msg {
+    display: none;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-top: 12px;
+}
+
+.msg.success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.msg.error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+
+/* =============================================
+   LOGIN PAGE
+   ============================================= */
+
+.login-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f4f6f9;
+}
+
+.login-box {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+}
+
+.login-box .login-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin-bottom: 6px;
+}
+
+.login-box .login-sub {
+    font-size: 13px;
+    color: #718096;
+    margin-bottom: 28px;
+}
+
+.login-box .form-group {
+    margin-bottom: 16px;
+}
+
+.login-box .btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+}
+
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+@media (max-width: 640px) {
+    .navbar {
+        padding: 0 12px;
+    }
+
+    .navbar nav {
+        gap: 12px;
+    }
+
+    .page {
+        margin: 16px auto;
+        padding: 0 12px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}

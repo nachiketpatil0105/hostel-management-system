@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | StayEase</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+
+<div class="login-wrap">
+    <div class="login-box">
+        <div class="login-title">StayEase</div>
+        <div class="login-sub">Hostel Management System</div>
+
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Enter your username">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter your password">
+        </div>
+
+        <div id="login-msg" class="msg"></div>
+
+        <div class="form-actions">
+            <button class="btn btn-primary" onclick="doLogin()">Login</button>
+        </div>
+    </div>
+</div>
+
+<!-- FIX: api.js must load before auth.js because auth.js calls redirectIfLoggedIn()
+     and the inline script calls showMessage(), both of which are defined in api.js. -->
+<script src="/static/js/api.js"></script>
+<script src="/static/js/auth.js"></script>
+<script>
+    redirectIfLoggedIn();
+
+    async function doLogin() {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!username || !password) {
+            showMessage("login-msg", "Please enter username and password.", true);
+            return;
+        }
+
+        const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: username, password: password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            localStorage.setItem("session_token", data.session_token);
+            const user = getUser();
+            const role = user ? user.role.toLowerCase() : "";
+            const destinations = {
+                admin: "/admin/dashboard",
+                warden: "/warden/dashboard",
+                security: "/security/dashboard",
+                student: "/student/profile"
+            };
+            window.location.href = destinations[role] || "/";
+        } else {
+            showMessage("login-msg", data.error || "Login failed.", true);
+        }
+    }
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") doLogin();
+    });
+</script>
+
+</body>
+</html>

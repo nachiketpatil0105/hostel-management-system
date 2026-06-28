@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block nav_links %}
+<a href="/student/profile">Profile</a>
+<a href="/student/complaint">Raise Complaint</a>
+<a href="/student/payments">Payments</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">My Profile</div>
+
+<div class="section" id="profile-section">
+    <div class="section-title">Personal Details</div>
+    <div id="profile-info" style="font-size:14px; line-height:2; color:#4a5568;">Loading...</div>
+</div>
+
+<div class="section">
+    <div class="section-title">Update Phone Number</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>New Phone Number</label>
+            <input type="text" id="new_phone" placeholder="10-digit mobile number" maxlength="10">
+        </div>
+    </div>
+    <div id="phone-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="updatePhone()">Update Phone</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">My Complaints</div>
+    <div class="table-wrap">
+        <table id="complaints-table"></table>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">My Payments</div>
+    <div class="table-wrap">
+        <table id="payments-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadProfile() {
+        const user = getUser();
+        if (!user) return;
+        const res = await apiRequest("GET", "/api/student/profile/" + user.member_id);
+        if (!res || !res.ok) return;
+
+        const p = res.data.profile;
+        const info = document.getElementById("profile-info");
+        info.innerHTML = [
+            "<b>Name:</b> " + (p.full_name || "-"),
+            "<b>Email:</b> " + (p.email || "-"),
+            "<b>Phone:</b> " + (p.phone || "-"),
+            "<b>Roll Number:</b> " + (p.roll_number || "-"),
+            "<b>Department:</b> " + (p.department || "-"),
+            "<b>Programme:</b> " + (p.programme || "-"),
+            "<b>Academic Year:</b> " + (p.academic_year || "-"),
+            "<b>Hostel:</b> " + (p.hostel_name || "Not allocated"),
+            "<b>Room:</b> " + (p.room_number || "Not allocated")
+        ].join("<br>");
+
+        buildTable("complaints-table", res.data.complaints);
+        buildTable("payments-table", res.data.payments);
+    }
+
+    async function updatePhone() {
+        const user = getUser();
+        if (!user) return;
+        const phone = document.getElementById("new_phone").value.trim();
+        if (!phone) {
+            showMessage("phone-msg", "Please enter a phone number.", true);
+            return;
+        }
+        const res = await apiRequest("PUT", "/api/student/profile/" + user.member_id, { phone: phone });
+        if (!res) return;
+        showMessage("phone-msg", res.data.message || (res.ok ? "Phone updated." : "Error."), !res.ok);
+        if (res.ok) {
+            document.getElementById("new_phone").value = "";
+            loadProfile();
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadProfile);
+</script>
+{% endblock %}

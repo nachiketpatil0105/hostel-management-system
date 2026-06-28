@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Movement Logs{% endblock %}
+
+{% block nav_links %}
+<a href="/admin/dashboard">Dashboard</a>
+<a href="/admin/users">Users</a>
+<a href="/admin/hostels">Hostels</a>
+<a href="/admin/rooms">Rooms</a>
+<a href="/admin/payments">Payments</a>
+<a href="/admin/complaints">Complaints</a>
+<a href="/admin/visitors">Visitors</a>
+<a href="/admin/movement">Movement</a>
+<a href="/admin/maintenance">Maintenance</a>
+<a href="/admin/complaint-types">Complaint Types</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Student Movement Logs</div>
+
+<div class="section">
+    <div class="section-title">Filter</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Direction</label>
+            <select id="filter_direction" onchange="loadMovement()">
+                <option value="">All</option>
+                <option value="OUT">Out (Exited)</option>
+                <option value="IN">In (Returned)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Hostel</label>
+            <select id="filter_hostel" onchange="loadMovement()">
+                <option value="">All Hostels</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Show</label>
+            <select id="filter_pending" onchange="applyClientFilter()">
+                <option value="">All</option>
+                <option value="pending">Still Outside (no return time)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Search Student</label>
+            <input type="text" id="filter_search" placeholder="Name or phone..." oninput="applyClientFilter()">
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Movement Logs <span id="movement-count" style="font-weight:normal;color:#888;font-size:14px;"></span></div>
+    <div class="table-wrap">
+        <table id="movement-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allMovements = [];
+
+    async function loadHostels() {
+        const res = await apiRequest("GET", "/api/admin/hostels");
+        if (!res || !res.ok) return;
+        const sel = document.getElementById("filter_hostel");
+        res.data.hostels.forEach(h => {
+            sel.innerHTML += `<option value="${h.hostel_id}">${h.hostel_name}</option>`;
+        });
+    }
+
+    async function loadMovement() {
+        const direction = document.getElementById("filter_direction").value;
+        const hostel = document.getElementById("filter_hostel").value;
+        let url = "/api/admin/movement";
+        const params = [];
+        if (direction) params.push("direction=" + encodeURIComponent(direction));
+        if (hostel) params.push("hostel_id=" + encodeURIComponent(hostel));
+        if (params.length) url += "?" + params.join("&");
+        const res = await apiRequest("GET", url);
+        if (!res || !res.ok) return;
+        allMovements = res.data.movement_logs;
+        applyClientFilter();
+    }
+
+    function applyClientFilter() {
+        const pending = document.getElementById("filter_pending").value;
+        const search = document.getElementById("filter_search").value.toLowerCase();
+        let filtered = allMovements;
+        if (pending === "pending") filtered = filtered.filter(m => !m.return_time);
+        if (search) {
+            filtered = filtered.filter(m =>
+                (m.student_name || "").toLowerCase().includes(search) ||
+                (m.phone || "").includes(search)
+            );
+        }
+        document.getElementById("movement-count").textContent = `(${filtered.length} records)`;
+        buildTable("movement-table", filtered);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadHostels();
+        loadMovement();
+    });
+</script>
+{% endblock %}

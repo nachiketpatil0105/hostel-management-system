@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Warden Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/dashboard.css">
+{% endblock %}
+
+{% block nav_links %}
+<a href="/warden/dashboard">Dashboard</a>
+<a href="/warden/students">Students</a>
+<a href="/warden/complaints">Complaints</a>
+<a href="/warden/inventory">Inventory</a>
+<a href="/warden/maintenance">Maintenance</a>
+<a href="/warden/visitors">Visitors</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Warden Dashboard</div>
+<div id="hostel-name" style="margin-bottom:20px; color:#718096; font-size:14px;"></div>
+
+<div class="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value" id="stat-students">—</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-label">Pending Complaints</div>
+        <div class="stat-value" id="stat-complaints">—</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-label">Available Rooms</div>
+        <div class="stat-value" id="stat-rooms">—</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDashboard() {
+        const res = await apiRequest("GET", "/api/warden/dashboard");
+        if (!res || !res.ok) return;
+        const d = res.data;
+        if (d.hostel) {
+            document.getElementById("hostel-name").textContent = d.hostel;
+        }
+        if (d.statistics) {
+            document.getElementById("stat-students").textContent = d.statistics.students;
+            document.getElementById("stat-complaints").textContent = d.statistics.pending_complaints;
+            document.getElementById("stat-rooms").textContent = d.statistics.available_rooms;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadDashboard);
+</script>
+{% endblock %}

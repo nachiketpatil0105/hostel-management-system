@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory{% endblock %}
+
+{% block nav_links %}
+<a href="/warden/dashboard">Dashboard</a>
+<a href="/warden/students">Students</a>
+<a href="/warden/complaints">Complaints</a>
+<a href="/warden/inventory">Inventory</a>
+<a href="/warden/maintenance">Maintenance</a>
+<a href="/warden/visitors">Visitors</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Inventory</div>
+
+<div class="section" id="report-section" style="display:none;">
+    <div class="section-title">Report Maintenance Issue — <span id="selected-item-label"></span></div>
+    <div class="form-grid">
+        <input type="hidden" id="item_id">
+        <div class="form-group">
+            <label>Maintenance Type</label>
+            <select id="maintenance_type">
+                <option value="">Select type</option>
+                <option value="REPAIR">Repair</option>
+                <option value="REPLACEMENT">Replacement</option>
+                <option value="INSPECTION">Inspection</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Issue Description</label>
+            <input type="text" id="issue_description" placeholder="Describe the issue">
+        </div>
+        <div class="form-group">
+            <label>Remarks (optional)</label>
+            <input type="text" id="remarks" placeholder="Additional remarks">
+        </div>
+    </div>
+    <div id="maintenance-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-danger" onclick="reportIssue()">Report Issue</button>
+        <button class="btn" onclick="cancelReport()" style="margin-left:10px;">Cancel</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Filter</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Status</label>
+            <select id="filter_status" onchange="applyFilter()">
+                <option value="">All</option>
+                <option value="IN_USE">In Use</option>
+                <option value="UNDER_REPAIR">Under Repair</option>
+                <option value="REPLACED">Replaced</option>
+                <option value="DISCARDED">Discarded</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Search Room / Category / Asset Tag</label>
+            <input type="text" id="filter_search" placeholder="Room, category or asset tag..." oninput="applyFilter()">
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Inventory Items <span id="inventory-count" style="font-weight:normal;color:#888;font-size:14px;"></span> <small style="font-weight:normal;color:#888;">(click Report Issue on an item to raise a request)</small></div>
+    <div class="table-wrap">
+        <table id="inventory-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allItems = [];
+
+    function selectItem(id, assetTag) {
+        document.getElementById("item_id").value = id;
+        document.getElementById("maintenance_type").value = "";
+        document.getElementById("issue_description").value = "";
+        document.getElementById("remarks").value = "";
+        document.getElementById("selected-item-label").textContent = `Item #${id} (${assetTag})`;
+        document.getElementById("report-section").style.display = "block";
+        document.getElementById("maintenance-msg").textContent = "";
+        document.getElementById("report-section").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function cancelReport() {
+        document.getElementById("report-section").style.display = "none";
+    }
+
+    async function reportIssue() {
+        const id = document.getElementById("item_id").value;
+        const body = {
+            maintenance_type: document.getElementById("maintenance_type").value,
+            issue_description: document.getElementById("issue_description").value.trim(),
+            remarks: document.getElementById("remarks").value.trim()
+        };
+        if (!body.maintenance_type || !body.issue_description) {
+            showMessage("maintenance-msg", "Please fill in all required fields.", true);
+            return;
+        }
+        const res = await apiRequest("PUT", "/api/warden/inventory/" + id, body);
+        if (!res) return;
+        showMessage("maintenance-msg", res.data.message || (res.ok ? "Issue reported." : "Error."), !res.ok);
+        if (res.ok) {
+            loadInventory();
+            cancelReport();
+        }
+    }
+
+    async function loadInventory() {
+        const res = await apiRequest("GET", "/api/warden/inventory");
+        if (!res || !res.ok) return;
+        allItems = res.data.inventory;
+        applyFilter();
+    }
+
+    function applyFilter() {
+        const status = document.getElementById("filter_status").value;
+        const search = document.getElementById("filter_search").value.toLowerCase();
+        let filtered = allItems;
+        if (status) filtered = filtered.filter(i => i.status === status);
+        if (search) {
+            filtered = filtered.filter(i =>
+                (i.room_number || "").toLowerCase().includes(search) ||
+                (i.category_name || "").toLowerCase().includes(search) ||
+                (i.asset_tag || "").toLowerCase().includes(search)
+            );
+        }
+        document.getElementById("inventory-count").textContent = `(${filtered.length} items)`;
+
+        const table = document.getElementById("inventory-table");
+        if (!filtered.length) {
+            table.innerHTML = "<tr><td>No inventory items found.</td></tr>";
+            return;
+        }
+        const headers = Object.keys(filtered[0]);
+        let html = "<thead><tr>" + headers.map(h => `<th>${h}</th>`).join("") + "<th>Action</th></tr></thead><tbody>";
+        filtered.forEach(item => {
+            const cols = headers.map(h => `<td>${item[h] ?? ""}</td>`).join("");
+            const disabled = item.status === "UNDER_REPAIR" ? "disabled" : "";
+            const btn = `<td><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" ${disabled}
+                onclick='selectItem(${item.item_id}, "${item.asset_tag}")'>Report Issue</button></td>`;
+            html += `<tr>${cols}${btn}</tr>`;
+        });
+        html += "</tbody>";
+        table.innerHTML = html;
+    }
+
+    document.addEventListener("DOMContentLoaded", loadInventory);
+</script>
+{% endblock %}

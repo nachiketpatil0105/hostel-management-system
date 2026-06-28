@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Visitors{% endblock %}
+
+{% block nav_links %}
+<a href="/security/dashboard">Dashboard</a>
+<a href="/security/visitors">Visitors</a>
+<a href="/security/movement">Movement</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Visitor Management</div>
+
+<div class="section">
+    <div class="section-title">Visitor Check-In</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>First Name</label>
+            <input type="text" id="first_name" placeholder="First name">
+        </div>
+        <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" id="last_name" placeholder="Last name">
+        </div>
+        <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="phone" placeholder="Phone number">
+        </div>
+        <div class="form-group">
+            <label>ID Type</label>
+            <select id="id_type">
+                <option value="">Select ID type</option>
+                <option value="AADHAR">Aadhar</option>
+                <option value="PAN">PAN</option>
+                <option value="PASSPORT">Passport</option>
+                <option value="DRIVING_LICENSE">Driving License</option>
+                <option value="OTHER">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>ID Number</label>
+            <input type="text" id="id_number" placeholder="ID number">
+        </div>
+        <div class="form-group">
+            <label>Student Being Visited</label>
+            <select id="student_member_id">
+                <option value="">Loading students...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Purpose</label>
+            <input type="text" id="purpose" placeholder="Purpose of visit">
+        </div>
+    </div>
+    <div id="checkin-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-success" onclick="checkIn()">Check In Visitor</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Active Visitors — Click a row to check out</div>
+    <div class="table-wrap">
+        <table id="active-visitors-table"></table>
+    </div>
+    <div id="checkout-msg" class="msg" style="margin-top:10px;"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadStudents() {
+        const res = await apiRequest("GET", "/api/security/hostel-students");
+        const sel = document.getElementById("student_member_id");
+        if (res && res.ok) {
+            sel.innerHTML = '<option value="">Select student</option>';
+            res.data.students.forEach(s => {
+                sel.innerHTML += `<option value="${s.member_id}">${s.student_name} — Room ${s.room_number} (${s.roll_number})</option>`;
+            });
+        } else {
+            sel.innerHTML = '<option value="">Failed to load</option>';
+        }
+    }
+
+    async function loadActiveVisitors() {
+        const res = await apiRequest("GET", "/api/security/dashboard");
+        if (!res || !res.ok) return;
+
+        const table = document.getElementById("active-visitors-table");
+        const visitors = res.data.active_visitors;
+
+        if (!visitors || !visitors.length) {
+            table.innerHTML = "<tr><td colspan='6'>No active visitors at the moment.</td></tr>";
+            return;
+        }
+
+        let html = `<thead><tr>
+            <th>Log ID</th><th>Visitor</th><th>Student</th>
+            <th>Room</th><th>Purpose</th><th>Check In</th><th>Action</th>
+        </tr></thead><tbody>`;
+        visitors.forEach(v => {
+            html += `<tr>
+                <td>${v.log_id}</td>
+                <td>${v.visitor_name}</td>
+                <td>${v.student_name}</td>
+                <td>${v.room_number}</td>
+                <td>${v.purpose}</td>
+                <td>${v.check_in}</td>
+                <td><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;"
+                    onclick="checkOut(${v.log_id})">Check Out</button></td>
+            </tr>`;
+        });
+        html += "</tbody>";
+        table.innerHTML = html;
+    }
+
+    async function checkIn() {
+        const body = {
+            first_name: document.getElementById("first_name").value.trim(),
+            last_name: document.getElementById("last_name").value.trim(),
+            phone: document.getElementById("phone").value.trim(),
+            id_type: document.getElementById("id_type").value,
+            id_number: document.getElementById("id_number").value.trim(),
+            student_member_id: parseInt(document.getElementById("student_member_id").value),
+            purpose: document.getElementById("purpose").value.trim()
+        };
+        if (!body.first_name || !body.id_type || !body.id_number || !body.student_member_id || !body.purpose) {
+            showMessage("checkin-msg", "Please fill in all required fields.", true);
+            return;
+        }
+        const res = await apiRequest("POST", "/api/security/visitors", body);
+        if (!res) return;
+        showMessage("checkin-msg", res.data.message || (res.ok ? "Visitor checked in." : "Error."), !res.ok);
+        if (res.ok) loadActiveVisitors();
+    }
+
+    async function checkOut(logId) {
+        const res = await apiRequest("PUT", "/api/security/visitors/" + logId + "/exit", null);
+        if (!res) return;
+        showMessage("checkout-msg", res.data.message || (res.ok ? "Visitor checked out." : "Error."), !res.ok);
+        if (res.ok) loadActiveVisitors();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadStudents();
+        loadActiveVisitors();
+    });
+</script>
+{% endblock %}

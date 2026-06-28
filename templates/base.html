@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}StayEase{% endblock %} | StayEase</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar">
+    <span class="brand">StayEase</span>
+    <nav>
+        {% block nav_links %}{% endblock %}
+        <span class="nav-user" id="nav-user"></span>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+    </nav>
+</nav>
+
+<div class="page">
+    {% block content %}{% endblock %}
+</div>
+
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/api.js"></script>
+{% block extra_js %}{% endblock %}
+<script>
+    requireAuth();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Movement{% endblock %}
+
+{% block nav_links %}
+<a href="/security/dashboard">Dashboard</a>
+<a href="/security/visitors">Visitors</a>
+<a href="/security/movement">Movement</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Student Movement</div>
+
+<div class="section">
+    <div class="section-title">Search Student</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Search</label>
+            <input type="text" id="search_q" placeholder="Name / roll number / room / phone" oninput="searchStudent()">
+        </div>
+    </div>
+    <div class="table-wrap" style="margin-top:16px;">
+        <table id="search-table"></table>
+    </div>
+</div>
+
+<div class="section" id="exit-section" style="display:none;">
+    <div class="section-title">Log Exit — <span id="exit-student-label"></span></div>
+    <input type="hidden" id="exit_member_id">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Gate Name</label>
+            <input type="text" id="gate_name" placeholder="e.g. Main Gate" value="Main Gate">
+        </div>
+        <div class="form-group">
+            <label>Remarks (optional)</label>
+            <input type="text" id="exit_remarks" placeholder="Remarks">
+        </div>
+    </div>
+    <div id="exit-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-danger" onclick="logExit()">Log Exit</button>
+        <button class="btn" onclick="clearSelection()" style="margin-left:10px;">Cancel</button>
+    </div>
+</div>
+
+<div class="section" id="return-section" style="display:none;">
+    <div class="section-title">Log Return — <span id="return-student-label"></span></div>
+    <input type="hidden" id="return_member_id">
+    <div id="return-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-success" onclick="logReturn()">Log Return</button>
+        <button class="btn" onclick="clearSelection()" style="margin-left:10px;">Cancel</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let searchTimeout = null;
+
+    async function searchStudent() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            const q = document.getElementById("search_q").value.trim();
+            if (q.length < 2) {
+                document.getElementById("search-table").innerHTML = "";
+                return;
+            }
+            const res = await apiRequest("GET", "/api/security/search-student?q=" + encodeURIComponent(q));
+            if (!res || !res.ok) return;
+
+            const table = document.getElementById("search-table");
+            const students = res.data.students;
+
+            if (!students.length) {
+                table.innerHTML = "<tr><td>No students found.</td></tr>";
+                return;
+            }
+
+            let html = `<thead><tr>
+                <th>Name</th><th>Roll No</th><th>Room</th><th>Phone</th>
+                <th>Log Exit</th><th>Log Return</th>
+            </tr></thead><tbody>`;
+            students.forEach(s => {
+                html += `<tr>
+                    <td>${s.student_name}</td>
+                    <td>${s.roll_number}</td>
+                    <td>${s.room_number}</td>
+                    <td>${s.phone}</td>
+                    <td><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;"
+                        onclick="selectExit(${s.member_id}, '${s.student_name.replace("'","\\'")}')">Exit</button></td>
+                    <td><button class="btn btn-success" style="padding:4px 10px;font-size:12px;"
+                        onclick="selectReturn(${s.member_id}, '${s.student_name.replace("'","\\'")}')">Return</button></td>
+                </tr>`;
+            });
+            html += "</tbody>";
+            table.innerHTML = html;
+        }, 300);
+    }
+
+    function selectExit(id, name) {
+        document.getElementById("exit_member_id").value = id;
+        document.getElementById("exit-student-label").textContent = name;
+        document.getElementById("exit-msg").textContent = "";
+        document.getElementById("exit-section").style.display = "block";
+        document.getElementById("return-section").style.display = "none";
+        document.getElementById("exit-section").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function selectReturn(id, name) {
+        document.getElementById("return_member_id").value = id;
+        document.getElementById("return-student-label").textContent = name;
+        document.getElementById("return-msg").textContent = "";
+        document.getElementById("return-section").style.display = "block";
+        document.getElementById("exit-section").style.display = "none";
+        document.getElementById("return-section").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function clearSelection() {
+        document.getElementById("exit-section").style.display = "none";
+        document.getElementById("return-section").style.display = "none";
+    }
+
+    async function logExit() {
+        const id = document.getElementById("exit_member_id").value;
+        const body = {
+            gate_name: document.getElementById("gate_name").value.trim() || "Main Gate",
+            remarks: document.getElementById("exit_remarks").value.trim()
+        };
+        const res = await apiRequest("POST", "/api/security/movement/" + id + "/exit", body);
+        if (!res) return;
+        showMessage("exit-msg", res.data.message || (res.ok ? "Exit logged." : "Error."), !res.ok);
+        if (res.ok) clearSelection();
+    }
+
+    async function logReturn() {
+        const id = document.getElementById("return_member_id").value;
+        const res = await apiRequest("POST", "/api/security/movement/" + id + "/return", null);
+        if (!res) return;
+        showMessage("return-msg", res.data.message || (res.ok ? "Return logged." : "Error."), !res.ok);
+        if (res.ok) clearSelection();
+    }
+</script>
+{% endblock %}

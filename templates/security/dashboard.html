@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Security Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/dashboard.css">
+{% endblock %}
+
+{% block nav_links %}
+<a href="/security/dashboard">Dashboard</a>
+<a href="/security/visitors">Visitors</a>
+<a href="/security/movement">Movement</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Security Dashboard</div>
+<div id="hostel-name" style="margin-bottom:20px; color:#718096; font-size:14px;"></div>
+
+<div class="section">
+    <div class="section-title">Active Visitors</div>
+    <div class="table-wrap">
+        <table id="visitors-table"></table>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Students Currently Outside</div>
+    <div class="table-wrap">
+        <table id="outside-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDashboard() {
+        const res = await apiRequest("GET", "/api/security/dashboard");
+        if (!res || !res.ok) return;
+        const d = res.data;
+        if (d.hostel_name) {
+            document.getElementById("hostel-name").textContent = d.hostel_name;
+        }
+        buildTable("visitors-table", d.active_visitors);
+        buildTable("outside-table", d.outside_students);
+    }
+
+    document.addEventListener("DOMContentLoaded", loadDashboard);
+</script>
+{% endblock %}

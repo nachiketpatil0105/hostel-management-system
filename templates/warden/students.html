@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Students{% endblock %}
+
+{% block nav_links %}
+<a href="/warden/dashboard">Dashboard</a>
+<a href="/warden/students">Students</a>
+<a href="/warden/complaints">Complaints</a>
+<a href="/warden/inventory">Inventory</a>
+<a href="/warden/maintenance">Maintenance</a>
+<a href="/warden/visitors">Visitors</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Students</div>
+
+<div class="section">
+    <div class="section-title">Filter</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Search Name / Roll / Room / Department</label>
+            <input type="text" id="filter_search" placeholder="Search..." oninput="applyFilter()">
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Students in Your Hostel <span id="student-count" style="font-weight:normal;color:#888;font-size:14px;"></span></div>
+    <div class="table-wrap">
+        <table id="students-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allStudents = [];
+
+    async function loadStudents() {
+        const res = await apiRequest("GET", "/api/warden/students");
+        if (!res || !res.ok) return;
+        allStudents = res.data.students;
+        applyFilter();
+    }
+
+    function applyFilter() {
+        const search = document.getElementById("filter_search").value.toLowerCase();
+        let filtered = allStudents;
+        if (search) {
+            filtered = filtered.filter(s =>
+                (s.student_name || "").toLowerCase().includes(search) ||
+                (s.roll_number || "").toLowerCase().includes(search) ||
+                (s.room_number || "").toLowerCase().includes(search) ||
+                (s.department || "").toLowerCase().includes(search)
+            );
+        }
+        document.getElementById("student-count").textContent = `(${filtered.length} students)`;
+        buildTable("students-table", filtered);
+    }
+
+    document.addEventListener("DOMContentLoaded", loadStudents);
+</script>
+{% endblock %}

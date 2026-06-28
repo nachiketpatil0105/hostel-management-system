@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/dashboard.css">
+{% endblock %}
+
+{% block nav_links %}
+<a href="/admin/dashboard">Dashboard</a>
+<a href="/admin/users">Users</a>
+<a href="/admin/hostels">Hostels</a>
+<a href="/admin/rooms">Rooms</a>
+<a href="/admin/payments">Payments</a>
+<a href="/admin/complaints">Complaints</a>
+<a href="/admin/visitors">Visitors</a>
+<a href="/admin/movement">Movement</a>
+<a href="/admin/maintenance">Maintenance</a>
+<a href="/admin/complaint-types">Complaint Types</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Dashboard</div>
+
+<div class="stats-grid" id="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-label">Students</div>
+        <div class="stat-value" id="stat-students">—</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-label">Wardens</div>
+        <div class="stat-value" id="stat-wardens">—</div>
+    </div>
+    <div class="stat-card teal">
+        <div class="stat-label">Security Staff</div>
+        <div class="stat-value" id="stat-security">—</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-label">Hostels</div>
+        <div class="stat-value" id="stat-hostels">—</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-label">Total Rooms</div>
+        <div class="stat-value" id="stat-rooms">—</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-label">Available Rooms</div>
+        <div class="stat-value" id="stat-available">—</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-label">Pending Complaints</div>
+        <div class="stat-value" id="stat-complaints">—</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDashboard() {
+        const res = await apiRequest("GET", "/api/admin/dashboard");
+        if (!res || !res.ok) return;
+        const s = res.data.statistics;
+        document.getElementById("stat-students").textContent = s.students;
+        document.getElementById("stat-wardens").textContent = s.wardens;
+        document.getElementById("stat-security").textContent = s.security;
+        document.getElementById("stat-hostels").textContent = s.hostels;
+        document.getElementById("stat-rooms").textContent = s.rooms;
+        document.getElementById("stat-available").textContent = s.available_rooms;
+        document.getElementById("stat-complaints").textContent = s.pending_complaints;
+    }
+
+    document.addEventListener("DOMContentLoaded", loadDashboard);
+</script>
+{% endblock %}

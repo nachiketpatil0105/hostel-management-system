@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint Types{% endblock %}
+
+{% block nav_links %}
+<a href="/admin/dashboard">Dashboard</a>
+<a href="/admin/users">Users</a>
+<a href="/admin/hostels">Hostels</a>
+<a href="/admin/rooms">Rooms</a>
+<a href="/admin/payments">Payments</a>
+<a href="/admin/complaints">Complaints</a>
+<a href="/admin/visitors">Visitors</a>
+<a href="/admin/movement">Movement</a>
+<a href="/admin/maintenance">Maintenance</a>
+<a href="/admin/complaint-types">Complaint Types</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Complaint Types</div>
+
+<div class="section">
+    <div class="section-title">Add Complaint Type</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Complaint Type Name</label>
+            <input type="text" id="complaint_type" placeholder="e.g. Plumbing">
+        </div>
+        <div class="form-group">
+            <label>Description (optional)</label>
+            <input type="text" id="description" placeholder="Short description">
+        </div>
+    </div>
+    <div id="type-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="addType()">Add Type</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">All Complaint Types</div>
+    <div class="table-wrap">
+        <table id="types-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function addType() {
+        const body = {
+            complaint_type: document.getElementById("complaint_type").value.trim(),
+            description: document.getElementById("description").value.trim()
+        };
+        if (!body.complaint_type) {
+            showMessage("type-msg", "Please enter a complaint type name.", true);
+            return;
+        }
+        const res = await apiRequest("POST", "/api/admin/complaint-types", body);
+        if (!res) return;
+        showMessage("type-msg", res.data.message || (res.ok ? "Type added." : "Error."), !res.ok);
+        if (res.ok) {
+            document.getElementById("complaint_type").value = "";
+            document.getElementById("description").value = "";
+            loadTypes();
+        }
+    }
+
+    async function deleteType(id, name) {
+        if (!confirm(`Delete complaint type "${name}"? This cannot be undone.`)) return;
+        const res = await apiRequest("DELETE", "/api/admin/complaint-types/" + id);
+        if (!res) return;
+        showMessage("type-msg", res.data.message || (res.ok ? "Deleted." : "Error."), !res.ok);
+        if (res.ok) loadTypes();
+    }
+
+    async function loadTypes() {
+        const res = await apiRequest("GET", "/api/admin/complaint-types");
+        if (!res || !res.ok) return;
+
+        const table = document.getElementById("types-table");
+        const types = res.data.complaint_types;
+
+        if (!types.length) {
+            table.innerHTML = "<tr><td>No complaint types found.</td></tr>";
+            return;
+        }
+
+        let html = `<thead><tr>
+            <th>ID</th><th>Type</th><th>Description</th><th>Action</th>
+        </tr></thead><tbody>`;
+        types.forEach(t => {
+            html += `<tr>
+                <td>${t.complaint_type_id}</td>
+                <td>${t.complaint_type}</td>
+                <td>${t.description || "—"}</td>
+                <td><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;"
+                    onclick="deleteType(${t.complaint_type_id}, '${t.complaint_type.replace("'", "\\'")}')">Delete</button></td>
+            </tr>`;
+        });
+        html += "</tbody>";
+        table.innerHTML = html;
+    }
+
+    document.addEventListener("DOMContentLoaded", loadTypes);
+</script>
+{% endblock %}

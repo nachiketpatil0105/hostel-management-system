@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Rooms{% endblock %}
+
+{% block nav_links %}
+<a href="/admin/dashboard">Dashboard</a>
+<a href="/admin/users">Users</a>
+<a href="/admin/hostels">Hostels</a>
+<a href="/admin/rooms">Rooms</a>
+<a href="/admin/payments">Payments</a>
+<a href="/admin/complaints">Complaints</a>
+<a href="/admin/visitors">Visitors</a>
+<a href="/admin/movement">Movement</a>
+<a href="/admin/maintenance">Maintenance</a>
+<a href="/admin/complaint-types">Complaint Types</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Rooms</div>
+
+<div class="section">
+    <div class="section-title">Create Room</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Floor</label>
+            <select id="floor_id">
+                <option value="">Loading floors...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Room Number</label>
+            <input type="text" id="room_number" placeholder="e.g. 101">
+        </div>
+        <div class="form-group">
+            <label>Room Type</label>
+            <select id="room_type">
+                <option value="">Select type</option>
+                <option value="Single">Single</option>
+                <option value="Double">Double</option>
+                <option value="Triple">Triple</option>
+                <option value="Quad">Quad</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Capacity</label>
+            <input type="number" id="capacity" placeholder="Capacity" min="1">
+        </div>
+    </div>
+    <div id="room-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Allocate Room to Student</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Student</label>
+            <select id="alloc_member_id">
+                <option value="">Loading students...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Room</label>
+            <select id="alloc_room_id">
+                <option value="">Loading rooms...</option>
+            </select>
+        </div>
+    </div>
+    <div id="alloc-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-success" onclick="allocateRoom()">Allocate Room</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">All Rooms</div>
+    <div class="table-wrap">
+        <table id="rooms-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDropdowns() {
+        const floorsRes = await apiRequest("GET", "/api/admin/floors");
+        const floorSel = document.getElementById("floor_id");
+        if (floorsRes && floorsRes.ok) {
+            floorSel.innerHTML = '<option value="">Select floor</option>';
+            floorsRes.data.floors.forEach(f => {
+                floorSel.innerHTML += `<option value="${f.floor_id}">${f.hostel_name} — Floor ${f.floor_number}</option>`;
+            });
+        } else {
+            floorSel.innerHTML = '<option value="">Failed to load</option>';
+        }
+
+        const usersRes = await apiRequest("GET", "/api/admin/users?role=Student");
+        const studentSel = document.getElementById("alloc_member_id");
+        if (usersRes && usersRes.ok) {
+            studentSel.innerHTML = '<option value="">Select student</option>';
+            usersRes.data.users.forEach(s => {
+                studentSel.innerHTML += `<option value="${s.member_id}">${s.full_name} (${s.member_id})</option>`;
+            });
+        } else {
+            studentSel.innerHTML = '<option value="">Failed to load</option>';
+        }
+
+        const roomsRes = await apiRequest("GET", "/api/admin/rooms");
+        const roomSel = document.getElementById("alloc_room_id");
+        if (roomsRes && roomsRes.ok) {
+            const available = roomsRes.data.rooms.filter(r => r.status !== "UNDER_MAINTENANCE" && r.available_slots > 0);
+            roomSel.innerHTML = '<option value="">Select room</option>';
+            available.forEach(r => {
+                roomSel.innerHTML += `<option value="${r.room_id}">${r.hostel_name} — Room ${r.room_number} (${r.available_slots} slot(s) free)</option>`;
+            });
+            buildTable("rooms-table", roomsRes.data.rooms);
+        } else {
+            roomSel.innerHTML = '<option value="">Failed to load</option>';
+        }
+    }
+
+    async function createRoom() {
+        const body = {
+            floor_id: parseInt(document.getElementById("floor_id").value),
+            room_number: document.getElementById("room_number").value.trim(),
+            room_type: document.getElementById("room_type").value,
+            capacity: parseInt(document.getElementById("capacity").value)
+        };
+        if (!body.floor_id || !body.room_number || !body.room_type || !body.capacity) {
+            showMessage("room-msg", "Please fill in all fields.", true);
+            return;
+        }
+        const res = await apiRequest("POST", "/api/admin/rooms", body);
+        if (!res) return;
+        showMessage("room-msg", res.data.message || (res.ok ? "Room created." : "Error."), !res.ok);
+        if (res.ok) loadDropdowns();
+    }
+
+    async function allocateRoom() {
+        const body = {
+            member_id: parseInt(document.getElementById("alloc_member_id").value),
+            room_id: parseInt(document.getElementById("alloc_room_id").value)
+        };
+        if (!body.member_id || !body.room_id) {
+            showMessage("alloc-msg", "Please select a student and a room.", true);
+            return;
+        }
+        const res = await apiRequest("POST", "/api/admin/allocate-room", body);
+        if (!res) return;
+        showMessage("alloc-msg", res.data.message || (res.ok ? "Room allocated." : "Error."), !res.ok);
+        if (res.ok) loadDropdowns();
+    }
+
+    document.addEventListener("DOMContentLoaded", loadDropdowns);
+</script>
+{% endblock %}

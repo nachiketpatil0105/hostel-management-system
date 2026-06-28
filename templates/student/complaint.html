@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Raise Complaint{% endblock %}
+
+{% block nav_links %}
+<a href="/student/profile">Profile</a>
+<a href="/student/complaint">Raise Complaint</a>
+<a href="/student/payments">Payments</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Raise a Complaint</div>
+
+<div class="section">
+    <div class="section-title">New Complaint</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Complaint Type</label>
+            <select id="complaint_type_id">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Priority</label>
+            <select id="priority">
+                <option value="LOW">Low</option>
+                <option value="MEDIUM" selected>Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="title" placeholder="Short title">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="description" placeholder="Describe the issue in detail"></textarea>
+        </div>
+    </div>
+    <div id="complaint-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="raiseComplaint()">Submit Complaint</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadComplaintTypes() {
+        const res = await apiRequest("GET", "/api/student/complaint-types");
+        const select = document.getElementById("complaint_type_id");
+        if (!res || !res.ok) {
+            select.innerHTML = '<option value="">Failed to load types</option>';
+            return;
+        }
+        select.innerHTML = '<option value="">Select complaint type</option>';
+        res.data.complaint_types.forEach(t => {
+            select.innerHTML += `<option value="${t.complaint_type_id}">${t.complaint_type} — ${t.description || ''}</option>`;
+        });
+    }
+
+    async function raiseComplaint() {
+        const body = {
+            complaint_type_id: parseInt(document.getElementById("complaint_type_id").value),
+            priority: document.getElementById("priority").value,
+            title: document.getElementById("title").value.trim(),
+            description: document.getElementById("description").value.trim()
+        };
+        if (!body.title || !body.description || !body.complaint_type_id) {
+            showMessage("complaint-msg", "Please fill in all required fields.", true);
+            return;
+        }
+        const res = await apiRequest("POST", "/api/student/complaints", body);
+        if (!res) return;
+        showMessage("complaint-msg", res.data.message || (res.ok ? "Complaint submitted." : "Error."), !res.ok);
+        if (res.ok) {
+            document.getElementById("title").value = "";
+            document.getElementById("description").value = "";
+            document.getElementById("complaint_type_id").value = "";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadComplaintTypes);
+</script>
+{% endblock %}

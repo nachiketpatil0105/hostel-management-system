@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Payments{% endblock %}
+
+{% block nav_links %}
+<a href="/admin/dashboard">Dashboard</a>
+<a href="/admin/users">Users</a>
+<a href="/admin/hostels">Hostels</a>
+<a href="/admin/rooms">Rooms</a>
+<a href="/admin/payments">Payments</a>
+<a href="/admin/complaints">Complaints</a>
+<a href="/admin/visitors">Visitors</a>
+<a href="/admin/movement">Movement</a>
+<a href="/admin/maintenance">Maintenance</a>
+<a href="/admin/complaint-types">Complaint Types</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Payments</div>
+
+<div class="section">
+    <div class="section-title">Record Payment</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Student</label>
+            <select id="member_id">
+                <option value="">Loading students...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Fee Structure</label>
+            <select id="fee_id">
+                <option value="">Loading fees...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Amount Paid</label>
+            <input type="number" step="0.01" id="amount_paid" placeholder="Amount">
+        </div>
+        <div class="form-group">
+            <label>Payment Method</label>
+            <select id="payment_method">
+                <option value="">Select method</option>
+                <option value="CASH">Cash</option>
+                <option value="UPI">UPI</option>
+                <option value="CARD">Card</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Transaction ID (optional)</label>
+            <input type="text" id="transaction_id" placeholder="Transaction ID">
+        </div>
+        <div class="form-group">
+            <label>Receipt Number (optional)</label>
+            <input type="text" id="receipt_number" placeholder="Receipt number">
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select id="payment_status">
+                <option value="SUCCESS">Success</option>
+                <option value="PENDING">Pending</option>
+                <option value="FAILED">Failed</option>
+                <option value="REFUNDED">Refunded</option>
+            </select>
+        </div>
+    </div>
+    <div id="payment-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="addPayment()">Record Payment</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Filter</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Status</label>
+            <select id="filter_status" onchange="loadPayments()">
+                <option value="">All</option>
+                <option value="SUCCESS">Success</option>
+                <option value="PENDING">Pending</option>
+                <option value="FAILED">Failed</option>
+                <option value="REFUNDED">Refunded</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Student</label>
+            <select id="filter_member_id" onchange="loadPayments()">
+                <option value="">All Students</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">All Payments <span id="payment-count" style="font-weight:normal;color:#888;font-size:14px;"></span></div>
+    <div class="table-wrap">
+        <table id="payments-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDropdowns() {
+        const usersRes = await apiRequest("GET", "/api/admin/users?role=Student");
+        const memberSel = document.getElementById("member_id");
+        const filterSel = document.getElementById("filter_member_id");
+        if (usersRes && usersRes.ok) {
+            const students = usersRes.data.users;
+            memberSel.innerHTML = '<option value="">Select student</option>';
+            filterSel.innerHTML = '<option value="">All Students</option>';
+            students.forEach(s => {
+                memberSel.innerHTML += `<option value="${s.member_id}">${s.full_name}</option>`;
+                filterSel.innerHTML += `<option value="${s.member_id}">${s.full_name}</option>`;
+            });
+        } else {
+            memberSel.innerHTML = '<option value="">Failed to load</option>';
+        }
+
+        const feesRes = await apiRequest("GET", "/api/admin/fee-structures");
+        const feeSel = document.getElementById("fee_id");
+        if (feesRes && feesRes.ok) {
+            feeSel.innerHTML = '<option value="">Select fee</option>';
+            feesRes.data.fee_structures.forEach(f => {
+                feeSel.innerHTML += `<option value="${f.fee_id}">${f.fee_name} — ${f.academic_year} ${f.semester} (₹${f.amount})</option>`;
+            });
+        } else {
+            feeSel.innerHTML = '<option value="">Failed to load</option>';
+        }
+    }
+
+    async function addPayment() {
+        const body = {
+            member_id: parseInt(document.getElementById("member_id").value),
+            fee_id: parseInt(document.getElementById("fee_id").value),
+            amount_paid: parseFloat(document.getElementById("amount_paid").value),
+            payment_method: document.getElementById("payment_method").value,
+            transaction_id: document.getElementById("transaction_id").value.trim() || null,
+            receipt_number: document.getElementById("receipt_number").value.trim() || null,
+            payment_status: document.getElementById("payment_status").value
+        };
+        if (!body.member_id || !body.fee_id || !body.amount_paid || !body.payment_method) {
+            showMessage("payment-msg", "Please fill in all required fields.", true);
+            return;
+        }
+        const res = await apiRequest("POST", "/api/admin/payments", body);
+        if (!res) return;
+        showMessage("payment-msg", res.data.message || (res.ok ? "Payment recorded." : "Error."), !res.ok);
+        if (res.ok) loadPayments();
+    }
+
+    async function loadPayments() {
+        const status = document.getElementById("filter_status").value;
+        const member = document.getElementById("filter_member_id").value;
+        let url = "/api/admin/payments";
+        const params = [];
+        if (status) params.push("payment_status=" + encodeURIComponent(status));
+        if (member) params.push("member_id=" + encodeURIComponent(member));
+        if (params.length) url += "?" + params.join("&");
+        const res = await apiRequest("GET", url);
+        if (!res || !res.ok) return;
+        const payments = res.data.payments;
+        document.getElementById("payment-count").textContent = `(${payments.length} records)`;
+        buildTable("payments-table", payments);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadDropdowns();
+        loadPayments();
+    });
+</script>
+{% endblock %}

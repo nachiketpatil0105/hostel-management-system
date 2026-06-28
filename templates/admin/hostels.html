@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Hostels{% endblock %}
+
+{% block nav_links %}
+<a href="/admin/dashboard">Dashboard</a>
+<a href="/admin/users">Users</a>
+<a href="/admin/hostels">Hostels</a>
+<a href="/admin/rooms">Rooms</a>
+<a href="/admin/payments">Payments</a>
+<a href="/admin/complaints">Complaints</a>
+<a href="/admin/visitors">Visitors</a>
+<a href="/admin/movement">Movement</a>
+<a href="/admin/maintenance">Maintenance</a>
+<a href="/admin/complaint-types">Complaint Types</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Hostels</div>
+
+<div class="section">
+    <div class="section-title">Create Hostel</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Hostel Name</label>
+            <input type="text" id="hostel_name" placeholder="Hostel name">
+        </div>
+        <div class="form-group">
+            <label>Type</label>
+            <select id="hostel_type">
+                <option value="">Select type</option>
+                <option value="BOYS">Boys</option>
+                <option value="GIRLS">Girls</option>
+                <option value="MIXED">Mixed</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Total Floors</label>
+            <input type="number" id="total_floors" placeholder="Number of floors" min="1">
+        </div>
+        <div class="form-group">
+            <label>Warden</label>
+            <select id="warden_member_id">
+                <option value="">Loading wardens...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Security Guard (optional)</label>
+            <select id="security_member_id">
+                <option value="">Loading security staff...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Address</label>
+            <input type="text" id="address" placeholder="Address">
+        </div>
+    </div>
+    <div id="hostel-msg" class="msg"></div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="createHostel()">Create Hostel</button>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">All Hostels</div>
+    <div class="table-wrap">
+        <table id="hostels-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDropdowns() {
+        const res = await apiRequest("GET", "/api/admin/users");
+        if (!res || !res.ok) return;
+
+        const wardenSel = document.getElementById("warden_member_id");
+        const secSel = document.getElementById("security_member_id");
+
+        const wardens = res.data.users.filter(u => u.role_name === "Warden");
+        const security = res.data.users.filter(u => u.role_name === "Security");
+
+        wardenSel.innerHTML = '<option value="">Select warden (optional)</option>';
+        wardens.forEach(w => {
+            wardenSel.innerHTML += `<option value="${w.member_id}">${w.full_name}</option>`;
+        });
+
+        secSel.innerHTML = '<option value="">Select security guard (optional)</option>';
+        security.forEach(s => {
+            secSel.innerHTML += `<option value="${s.member_id}">${s.full_name}</option>`;
+        });
+    }
+
+    async function createHostel() {
+        const body = {
+            hostel_name: document.getElementById("hostel_name").value.trim(),
+            hostel_type: document.getElementById("hostel_type").value,
+            total_floors: parseInt(document.getElementById("total_floors").value),
+            warden_member_id: parseInt(document.getElementById("warden_member_id").value) || null,
+            security_member_id: parseInt(document.getElementById("security_member_id").value) || null,
+            address: document.getElementById("address").value.trim()
+        };
+        if (!body.hostel_name || !body.hostel_type || !body.total_floors) {
+            showMessage("hostel-msg", "Please fill in all required fields.", true);
+            return;
+        }
+        const res = await apiRequest("POST", "/api/admin/hostels", body);
+        if (!res) return;
+        showMessage("hostel-msg", res.data.message || (res.ok ? "Hostel created." : "Error."), !res.ok);
+        if (res.ok) loadHostels();
+    }
+
+    async function loadHostels() {
+        const res = await apiRequest("GET", "/api/admin/hostels");
+        if (!res || !res.ok) return;
+        buildTable("hostels-table", res.data.hostels);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadDropdowns();
+        loadHostels();
+    });
+</script>
+{% endblock %}

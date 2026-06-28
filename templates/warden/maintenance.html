@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance{% endblock %}
+
+{% block nav_links %}
+<a href="/warden/dashboard">Dashboard</a>
+<a href="/warden/students">Students</a>
+<a href="/warden/complaints">Complaints</a>
+<a href="/warden/inventory">Inventory</a>
+<a href="/warden/maintenance">Maintenance</a>
+<a href="/warden/visitors">Visitors</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Maintenance Requests</div>
+
+<div class="section">
+    <div class="section-title">Filter</div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Status</label>
+            <select id="filter_status" onchange="applyFilter()">
+                <option value="">All</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Search Room / Category / Asset Tag</label>
+            <input type="text" id="filter_search" placeholder="Room, category or asset tag..." oninput="applyFilter()">
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Reported Maintenance Requests <span id="maintenance-count" style="font-weight:normal;color:#888;font-size:14px;"></span></div>
+    <div class="table-wrap">
+        <table id="maintenance-table"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allRequests = [];
+
+    async function loadMaintenance() {
+        const res = await apiRequest("GET", "/api/warden/maintenance");
+        if (!res || !res.ok) return;
+        allRequests = res.data.maintenance;
+        applyFilter();
+    }
+
+    function applyFilter() {
+        const status = document.getElementById("filter_status").value;
+        const search = document.getElementById("filter_search").value.toLowerCase();
+        let filtered = allRequests;
+        if (status) filtered = filtered.filter(r => r.status === status);
+        if (search) {
+            filtered = filtered.filter(r =>
+                (r.room_number || "").toLowerCase().includes(search) ||
+                (r.category_name || "").toLowerCase().includes(search) ||
+                (r.asset_tag || "").toLowerCase().includes(search)
+            );
+        }
+        document.getElementById("maintenance-count").textContent = `(${filtered.length} records)`;
+        buildTable("maintenance-table", filtered);
+    }
+
+    document.addEventListener("DOMContentLoaded", loadMaintenance);
+</script>
+{% endblock %}

@@ -2,7 +2,7 @@
 
 StayEase is a robust, role-based hostel management system built with Flask and MySQL. Unlike standard CRUD applications, StayEase is specifically engineered to handle high-concurrency environments, preventing data corruption and authorization leaks under heavy load.
 
-It serves four distinct user roles—Admin, Warden, Security, and Student—each with strict data boundaries and tailored workflows for managing room allocations, complaints, inventory, and campus security.
+It serves four distinct user roles-Admin, Warden, Security, and Student-each with strict data boundaries and tailored workflows for managing room allocations, complaints, inventory, and campus security.
 
 ## Engineering Focus: Concurrency & Performance
 

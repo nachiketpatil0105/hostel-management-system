@@ -18,6 +18,12 @@ Standard database operations are vulnerable to Read-Modify-Write race conditions
 * **Load Testing & Validation:** The system architecture was stress-tested using Locust. Simulating a spike test of 50 concurrent users aggressively hitting allocation and worker-queue bottlenecks, the API successfully processed over 24,000 requests with a 15ms median latency and zero data collisions. The system successfully returned HTTP 400 and 409 conflict responses to block overbooking attempts.
 * **Strict Cross-Hostel Authorization:** Implemented query-level isolation checks. A warden or security guard assigned to Hostel A is cryptographically and programmatically blocked from reading or modifying data for students in Hostel B.
 
+## Performance Results
+
+The following plots demonstrate the system's stability and response times during the 50-user spike test, maintaining a 15ms median latency with zero data collisions across 24,000+ requests.
+
+![Locust Load Test Results](tests/test_results/result_plots.png)
+
 ## Features by Role
 
 ### Admin

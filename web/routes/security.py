@@ -411,8 +411,6 @@ def mark_student_returned(current_user, member_id):
         if not cursor.fetchone():
             return jsonify({"success": False, "message": "Student not found."}), 404
 
-        # Bug 5 fix: ensure the student belongs to this user's assigned hostel.
-        # Wardens use hostels.warden_member_id; security use hostel_security_assignments.
         role = current_user["role"].lower()
         if role == "warden":
             cursor.execute("""

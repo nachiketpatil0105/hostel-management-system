@@ -822,8 +822,6 @@ def allocate_room(current_user):
     try:
 
         conn.start_transaction()
-
-        # Bug 6 fix: verify member_id is actually a student
         cursor.execute("""
             SELECT member_id FROM student_profiles WHERE member_id = %s
         """, (data["member_id"],))

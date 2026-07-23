@@ -231,7 +231,6 @@ def update_complaint(current_user, complaint_id):
         status = data["status"]
         remarks = data.get("remarks", "")
 
-        # Bug 3 fix: verify complaint belongs to a student in this warden's hostel
         cursor.execute("""
             SELECT c.complaint_id
             FROM complaints c
@@ -248,7 +247,6 @@ def update_complaint(current_user, complaint_id):
                 "message": "This complaint does not belong to your hostel."
             }), 403
 
-        # Bug 7 fix: clear resolved_at when re-opening so schema CHECK constraint is not violated
         cursor.execute("""
             UPDATE complaints
             SET
@@ -361,7 +359,6 @@ def report_inventory_issue(current_user, item_id):
 
     try:
 
-        # Bug 4 fix: verify item belongs to a room in this warden's hostel
         cursor.execute("""
             SELECT ii.item_id
             FROM inventory_items ii

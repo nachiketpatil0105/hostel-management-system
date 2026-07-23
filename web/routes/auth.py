@@ -69,8 +69,8 @@ def is_auth():
 
     if 'Authorization' in request.headers:
         token = request.headers['Authorization'].split(" ")[1]
-    elif request.is_json and 'session_token' in request.get_json():
-        token = request.get_json()['session_token']
+    # elif request.is_json and 'session_token' in request.get_json():
+    #     token = request.get_json()['session_token']
 
     if not token:
         return jsonify({"error": "No session found"}), 401

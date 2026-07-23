@@ -382,6 +382,9 @@ CREATE TABLE inventory_maintenance (
     completed_at TIMESTAMP NULL,
     remarks TEXT,
 
+    CONSTRAINT chk_maintenance_completed_at
+        CHECK (status != 'COMPLETED' OR completed_at IS NOT NULL),
+
     CONSTRAINT fk_maintenance_item
         FOREIGN KEY (item_id) REFERENCES inventory_items(item_id)
         ON DELETE CASCADE,
